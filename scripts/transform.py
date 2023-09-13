@@ -15,7 +15,7 @@ job = Job(glueContext)
 job.init(args["JOB_NAME"], args)
 
 # Script generated for node Amazon S3
-weather_dyf = glueContext.create_dynamic_frame.from_options(
+df = glueContext.create_dynamic_frame.from_options(
     format_options={"quoteChar": '"', "withHeader": True, "separator": ","},
     connection_type="s3",
     format="csv",
@@ -27,7 +27,7 @@ weather_dyf = glueContext.create_dynamic_frame.from_options(
 )
 
 # Script generated for node Change Schema
-changeschema_weather_dyf = ApplyMapping.apply(
+changeschema_df = ApplyMapping.apply(
     frame=df,
     mappings=[
         ("fuel", "string", "fuel", "string"),
