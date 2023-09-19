@@ -1,5 +1,7 @@
 from airflow import DAG
 from airflow.providers.amazon.aws.operators.glue import GlueJobOperator
+from airflow.providers.amazon.aws.operators.s3_list import S3ListOperator
+from airflow.providers.amazon.aws.operators.s3_to_local_filesystem import S3ToLocalFilesystemOperator
 from airflow.sensors.external_task_sensor import ExternalTaskMarker, ExternalTaskSensor
 from datetime import datetime, timedelta
 
@@ -27,6 +29,38 @@ transform_task = GlueJobOperator(
     dag=dag,
 )
 
-    
+#### fatching latest file ###
+
+# Define the task to list objects in the S3 bucket
+list_s3_objects_task = S3ListOperator(
+    task_id='list_s3_objects_task',
+    bucket_name=s3_bucket_name,
+    prefix=s3_prefix,
+    delimiter='/',
+    aws_conn_id=s3_conn_id,
+    do_xcom_push=True,  # Push the list of objects to XCom
+    task_id='list_s3_objects_task',
+    dag=dag,
+)
+
+# Define a Python function to select the latest file from the list
+def select_latest_file(files):
+    return max(files, key=lambda x: x['LastModified'])
+
+# Define the task to download the latest CSV file to the local directory
+download_latest_csv_task = S3ToLocalFilesystemOperator(
+    task_id='download_latest_csv_task',
+    bucket_name=s3_bucket_name,
+    bucket_key="{{ ti.xcom_pull(task_ids='list_s3_objects_task', key='return_value') | select_latest_file }}",  # Use the output of list_s3_objects_task
+    local_file=os.path.join(local_dir, 'latest.csv'),
+    aws_conn_id=s3_conn_id,
+    task_id='download_latest_csv_task',
+    dag=dag,
+)
+
 # Set task dependencies
-#get_api >> transform_task
+list_s3_objects_task >> download_latest_csv_task >> transform_task
+
+
+if __name__ == "__main__":
+    dag.cli()
