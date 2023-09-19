@@ -29,7 +29,14 @@ transform_task = GlueJobOperator(
     dag=dag,
 )
 
-#### fatching latest file ###
+#### fatching latest file ####
+# S3 bucket and folder information
+s3_bucket_name = 'greenbucketdata'
+s3_prefix = 's3://greenbucketdata/Data/'  # The folder where your CSV files are located
+s3_conn_id = 'aws_default'  # The Airflow connection ID for AWS S3
+
+# Local directory where the CSV file will be downloaded
+local_dir = 's3://aws-glue-assets-703537846147-eu-west-2/temporary/'
 
 # Define the task to list objects in the S3 bucket
 list_s3_objects_task = S3ListOperator(
